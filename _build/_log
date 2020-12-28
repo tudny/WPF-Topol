@@ -1,0 +1,26 @@
+### Starting build.
+# Target: main.ml.depends, tags: { extension:ml, file:main.ml, ocaml, ocamldep, quiet, traverse }
+ocamldep.opt -modules main.ml > main.ml.depends
+# Target: topol.mli.depends, tags: { extension:mli, file:topol.mli, ocaml, ocamldep, quiet, traverse }
+ocamldep.opt -modules topol.mli > topol.mli.depends # cached
+# Target: topol.cmi, tags: { byte, compile, extension:mli, file:topol.mli, interf, ocaml, quiet, traverse }
+ocamlc.opt -c -o topol.cmi topol.mli # cached
+# Target: main.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:main.cmo, file:main.ml, implem, ocaml, quiet, traverse }
+ocamlc.opt -c -o main.cmo main.ml
+# Target: topol.ml.depends, tags: { extension:ml, file:topol.ml, ocaml, ocamldep, quiet, traverse }
+ocamldep.opt -modules topol.ml > topol.ml.depends # cached
+# Target: pMap.ml.depends, tags: { extension:ml, file:pMap.ml, ocaml, ocamldep, quiet, traverse }
+ocamldep.opt -modules pMap.ml > pMap.ml.depends # cached
+# Target: pMap.mli.depends, tags: { extension:mli, file:pMap.mli, ocaml, ocamldep, quiet, traverse }
+ocamldep.opt -modules pMap.mli > pMap.mli.depends # cached
+# Target: pMap.cmi, tags: { byte, compile, extension:mli, file:pMap.mli, interf, ocaml, quiet, traverse }
+ocamlc.opt -c -o pMap.cmi pMap.mli # cached
+# Target: pMap.cmx, tags: { compile, extension:cmx, extension:ml, file:pMap.cmx, file:pMap.ml, implem, native, ocaml, quiet, traverse }
+ocamlopt.opt -c -o pMap.cmx pMap.ml # cached
+# Target: topol.cmx, tags: { compile, extension:cmx, extension:ml, file:topol.cmx, file:topol.ml, implem, native, ocaml, quiet, traverse }
+ocamlopt.opt -c -o topol.cmx topol.ml # cached
+# Target: main.cmx, tags: { compile, extension:cmx, extension:ml, file:main.cmx, file:main.ml, implem, native, ocaml, quiet, traverse }
+ocamlopt.opt -c -o main.cmx main.ml
+# Target: main.native, tags: { dont_link_with, extension:native, file:main.native, link, native, ocaml, program, quiet, traverse }
+ocamlopt.opt pMap.cmx topol.cmx main.cmx -o main.native
+# Compilation successful.

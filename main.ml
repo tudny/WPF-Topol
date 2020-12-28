@@ -9,5 +9,5 @@ assert (t = [1; 2; 3; 4; 5]);;
 
 let g2 = [(1, [2]); (2, [1])];;
 
-let t2 = topol g2;;
+try topol g2 with _ -> [];;
 

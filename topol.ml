@@ -29,125 +29,118 @@
 exception Cykliczne
 ;;
 
-(* Funkcja przyjmuje graf w postaci danej na wejściu w zadaniu   *)
-(* Zwraca mapę, której klucze i wartości odpowiadają numerowi    *)
-(* wierzchołka oraz jego wartości podanej na wejściu             *)
-(* Najprościej mówiąc mapa pozwala na ponumerowanie wierzchołków *)
-let create_map graph =
-  List.fold_left
-    (fun (_acc, cnt) (label, neighbours) ->
-       (PMap.add label cnt _acc, cnt + 1)
-    ) (PMap.empty, 0) graph
+(* Zbieram wszystkie wierzchołki i tworzę mapy, na podstawie których  *)
+(* mogę ponumerować wierzchołki. Później będę mógł zamienić numerację *)
+(* na etykietki.                                                      *)
+let collect_vertices_map data = 
+  let (nodes, edges) = List.split data
+  in
+  let vertices = nodes @ List.flatten edges
+  in
+  let counter = ref 0
+  in
+  let increase () = 
+    counter := !counter + 1;
+    !counter - 1
+  in
+  let process (map_in, map_out) ele = 
+    if PMap.mem ele map_in then (map_in, map_out)
+    else 
+      let id = increase () in
+      (PMap.add ele id map_in, PMap.add id ele map_out) 
+  in
+  let (map_in, map_out) =
+    List.fold_left (process) (PMap.empty, PMap.empty) vertices
+  in
+  (map_in, map_out, !counter)
 ;;
 
-(* Funkcja przyjmuje graf w postaci danej na wejściu w zadaniu    *)
-(* oraz mapę wierzchołków (nazwaną wyżej numeracją)               *)
-(* Zwraca graf w postaci list, lecz z przenazwanymi wierzchołkami *)
-let convert graph mapped =
-  List.map (fun (label, neighbours) ->
-      (PMap.find label mapped,
-       List.map (fun neighbour -> PMap.find neighbour mapped) neighbours)
-    ) graph
+(* Typ wierzchołka w grafie             *)
+(* label - etykietka, egdes - krawędzie *)
+type node = { label : int; mutable edges : int list }
 ;;
 
-(* Funkcja przyjmuje graf w postaci danej na wejściu w zadaniu *)
-(* oraz tablicę, która dla każdego wierzchołka będzie pamiętać *)
-(* ile wierzchołków do niego wchodzi                           *)
-let fill_in_degree graph in_degree =
-  List.iter (fun (label, neighbours) ->
-      List.iter (fun neighbour ->
-          in_degree.(neighbour) <- in_degree.(neighbour) + 1
-        ) neighbours
-    ) graph
-;;
-
-(* Funkcja przyjemuje kolejkę wierzchołków do przerobienia *)
-(* oraz tablicę, która dla każdego wierzchołka pamięta ile *)
-(* wierzchołków do niego wchodzi                           *)
-let fill_queue queue in_degree =
-  Array.iteri
-    (fun id degree ->
-      if degree = 0 then
-        Queue.add id queue)
-    in_degree
-;;
-
-(* Funkcja przyjmuje listę dzieci wierzchołka X i dla każdego dziecka *)
-(* zmniejsza jego stopień wejścia (tablica [in_degree])               *)
-let dec_degree neighbours in_degree =
+(* Tworzę graf wierzchołków przenumerowanych na podstawie danych *)
+(* wejściowych.                                                  *)
+let create_graph data map_in counter = 
+  let graph = Array.init counter (fun i -> { label = i; edges = [] })
+  in
   List.iter
-    (fun neighbour -> in_degree.(neighbour) <- in_degree.(neighbour) - 1)
-    neighbours
+  ( fun (n, edges) ->
+    let n_mapped = PMap.find n map_in in 
+    List.iter
+    ( fun e ->
+      let e_mapped = PMap.find e map_in in 
+      graph.(n_mapped).edges <- e_mapped :: graph.(n_mapped).edges
+    ) edges
+  ) data;
+  graph
 ;;
 
-(* Funkcja dodaje do kolejki rozpatrywanych wierzchołków wszystkie *)
-(* wierzchołki, których stopień wejścia wynosi 0                   *)
-let make_up_queue neighbours in_degree queue =
-  List.iter
-    (fun neighbour ->
-       if in_degree.(neighbour) = 0 then Queue.add neighbour queue)
-    neighbours
+(* Otrzymany wynik spowrotem zamieniam na oryginalne etykietki *)
+let decode_result map_out result = 
+  List.map (fun ele -> PMap.find ele map_out) result
 ;;
 
-(* Funkcja przyjmuje mapę i zwraca nową mapę powstałą przez zebranie *)
-(* wszystkich par (key, value) i dodanie ich jako (value, key)       *)
-let reverse_map map = 
-  PMap.foldi
-      (fun key value _acc -> PMap.add value key _acc)
-      map PMap.empty
-;;
 
-(* Funkcja ta na podstawie wyniku, liczby wierzchołków oraz    *)
-(* zmapowanego grafu tworzy wynik programu                     *)
-(* Sprawdza czy wynik jest poprawny. Jeżeli wynik jest         *)
-(* niepoprawny, to podnosi wyjątek [Cykliczne]                 *)
-(* Jeżeli wynik jest poprawny przemapowuje numery wierzchołków *)
-(* na ich oryginalnego wartości (etykietki)                    *)
-let produce_output score map nr_of_nodes = 
-  if List.length score <> nr_of_nodes then
-    raise Cykliczne
-  else
-    List.fold_left
-      (fun _acc el -> PMap.find el map :: _acc) 
-      [] score
-;;
+(*         Algorytm Sortowania Topologicznego         *)
+(* Szkic działania w komentarzu na górze [@link 12:4] *)
+let toposort graph counter = 
+  let in_degree = Array.make counter 0
+  in
 
-(* Funcja główna wykonująca listę kroków rozwiązania *)
-let topol graph =
-  (* Stworenie ponumerowania wierzchołków *)
-  let (mapped, nr_of_nodes) = create_map graph in
-  (* Przekonwertowanie wierzchołków z etykietek na numery *)
-  let converted = convert graph mapped in
-  (* Konwersja Listy wierzchołków na Tablicę *)
-  (* Pozwala to na szybki dostęp do konkretnego wierzchołka *)
-  let arr_graph = Array.of_list converted in
-  (* Tablica 'stopnia wejścia' dla każdego wierzchołka           *)
-  (* 'Stopniem wejścia' danego wierzchołka nazwę liczbę krawędzi *)
-  (* wchodzących do danego wierzchołka                           *)
-  (* Z początku pusta; zaraz potem wypełniona przez przejście    *)
-  (* się po wszystkich wierzchołkach i ich dzieciach             *)
-  let in_degree = Array.make nr_of_nodes 0 in
-  fill_in_degree converted in_degree;
-  (* Kolejka wierzchołków do rozpatrzenia                 *)
-  (* Przez rozpatrzenie rozumiem usinięcie go z grafu     *)
-  (* co skutkuje zmiejszeniem stopnia wejścia jego dzieci *)
-  let queue = Queue.create () in
-  fill_queue queue in_degree;
-  (* Wynik zapisuję na liście (dodając do niej imperatywnie) *)
-  let score = ref [] in
-  let add_to_score x = score := x :: !score in
-  (* Na liście znajdują się wierzchołki, których stopień wejścia wynosi 0 *)
-  (* zatem mogę usunąć je z grafu, zmniejszyć stopień wejścia ich synów   *)
-  (* oraz dodać na listę wynikową                                         *)
+  Array.iter
+    ( fun { edges = edges } ->
+      List.iter
+        ( fun ele ->
+          in_degree.(ele) <- in_degree.(ele) + 1
+        ) edges
+    ) graph;
+
+  let queue = Queue.create ()
+  in
+
+  let add_to_queue_if_zero node = 
+    if in_degree.(node) = 0 then Queue.add node queue
+  in
+
+  Array.iter
+    ( fun { label = label } ->
+      add_to_queue_if_zero label
+    ) graph;
+  
+  let result = ref []
+  in
+  let add_result x = 
+    result := x :: !result
+  in
+
   while not (Queue.is_empty queue) do
-    let element = Queue.take queue in
-    add_to_score element;
-    dec_degree (arr_graph.(element) |> snd) in_degree;
-    make_up_queue (arr_graph.(element) |> snd) in_degree queue
+    let front = Queue.take queue
+    in
+    add_result front;
+    List.iter
+      ( fun ele ->
+        in_degree.(ele) <- in_degree.(ele) - 1;
+        add_to_queue_if_zero ele
+      ) graph.(front).edges
   done;
-  (* Wynik przetwarzam oraz zwracam *)
-  let reversed_map = reverse_map mapped in
-  produce_output !score reversed_map nr_of_nodes
+
+  if List.length !result <> counter then raise Cykliczne;
+  !result |> List.rev
+;;
+
+(* Funkcja najpierw mapuje wartości, potem tworzy graf, *)
+(* wywołuje algorytm sortowania topologicznego i zwraca *)
+(* zdekodowany wynik.                                   *)
+let topol data = 
+  let map_in, map_out, counter = collect_vertices_map data
+  in
+  let graph = create_graph data map_in counter
+  in
+  let topo_sorted = toposort graph counter
+  in
+  decode_result map_out topo_sorted
 ;;
 
 

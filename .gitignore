@@ -3,3 +3,4 @@ _tags
 .merlin
 main.native
 testy-topol/
+test-generator/

@@ -68,7 +68,7 @@ let create_graph data map_in counter =
   let add_edge v w =
     graph.(v).edges <- w :: graph.(v).edges
   in
-  let process_edge edge start = 
+  let process_edge start edge = 
     let mapped_edge = PMap.find edge map_in in
     add_edge start mapped_edge
   in

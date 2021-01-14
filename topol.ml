@@ -2,7 +2,7 @@
 (* ******************************* *)
 (* Topol (Sortowanie topologiczne) *)
 (* Autor: Aleksander Tudruj        *)
-(* Code review:                    *)
+(* Code review: Patrycja Krzyna    *)
 (* ******************************* *)
 
 (* ***************** *)
@@ -65,15 +65,18 @@ type node = { label : int; mutable edges : int list }
 let create_graph data map_in counter = 
   let graph = Array.init counter (fun i -> { label = i; edges = [] })
   in
-  List.iter
-  ( fun (n, edges) ->
-    let n_mapped = PMap.find n map_in in 
-    List.iter
-    ( fun e ->
-      let e_mapped = PMap.find e map_in in 
-      graph.(n_mapped).edges <- e_mapped :: graph.(n_mapped).edges
-    ) edges
-  ) data;
+  let add_edge v w =
+    graph.(v).edges <- w :: graph.(v).edges
+  in
+  let process_edge edge start = 
+    let mapped_edge = PMap.find edge map_in in
+    add_edge start mapped_edge
+  in
+  let process_node (node, edges) = 
+    let mapped_node = PMap.find node map_in in 
+    List.iter (process_edge mapped_node) edges
+  in
+  List.iter process_node data;
   graph
 ;;
 
@@ -89,13 +92,15 @@ let toposort graph counter =
   let in_degree = Array.make counter 0
   in
 
-  Array.iter
-    ( fun { edges = edges } ->
-      List.iter
-        ( fun ele ->
-          in_degree.(ele) <- in_degree.(ele) + 1
-        ) edges
-    ) graph;
+  let change_degree value node =
+    in_degree.(node) <- in_degree.(node) + value
+  in
+
+  let process_node { edges = edges } = 
+    List.iter (change_degree 1) edges
+  in
+
+  Array.iter process_node graph;
 
   let queue = Queue.create ()
   in
@@ -104,10 +109,7 @@ let toposort graph counter =
     if in_degree.(node) = 0 then Queue.add node queue
   in
 
-  Array.iter
-    ( fun { label = label } ->
-      add_to_queue_if_zero label
-    ) graph;
+  Array.iter ( fun { label = label } -> add_to_queue_if_zero label ) graph;
   
   let result = ref []
   in
@@ -119,11 +121,11 @@ let toposort graph counter =
     let front = Queue.take queue
     in
     add_result front;
-    List.iter
-      ( fun ele ->
-        in_degree.(ele) <- in_degree.(ele) - 1;
-        add_to_queue_if_zero ele
-      ) graph.(front).edges
+    let process_node ele = 
+      in_degree.(ele) <- in_degree.(ele) - 1;
+      add_to_queue_if_zero ele
+    in
+    List.iter process_node graph.(front).edges
   done;
 
   if List.length !result <> counter then raise Cykliczne;

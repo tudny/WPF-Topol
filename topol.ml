@@ -77,7 +77,7 @@ let create_graph data map_in counter =
   graph
 ;;
 
-(* Otrzymany wynik spowrotem zamieniam na oryginalne etykietki *)
+(* Otrzymany wynik z powrotem zamieniam na oryginalne etykietki *)
 let decode_result map_out result = 
   List.map (fun ele -> PMap.find ele map_out) result
 ;;

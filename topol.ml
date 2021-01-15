@@ -122,7 +122,7 @@ let toposort graph counter =
     in
     add_result front;
     let process_node ele = 
-      in_degree.(ele) <- in_degree.(ele) - 1;
+      change_degree (-1) ele;
       add_to_queue_if_zero ele
     in
     List.iter process_node graph.(front).edges

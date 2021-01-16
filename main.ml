@@ -1,7 +1,7 @@
 
 open Topol;;
 
-let print_list li = 
+let print_list li =
   List.iter (Printf.printf "%d, ") li; print_string "\n"
 ;;
 
